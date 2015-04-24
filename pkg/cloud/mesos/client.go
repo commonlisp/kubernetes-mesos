@@ -86,14 +86,27 @@ func (c *stateCache) getNodes(ctx context.Context) ([]*slaveNode, error) {
 	return cached.nodes, err
 }
 
-func newMesosClient(md detector.Master, mesosHttpClientTimeout, stateCacheTTL time.Duration) (*mesosClient, error) {
+func newMesosClient(
+	md detector.Master,
+	mesosHttpClientTimeout, stateCacheTTL time.Duration) (*mesosClient, error) {
+
 	tr := &http.Transport{}
+	httpClient := &http.Client{
+		Transport: tr,
+		Timeout:   mesosHttpClientTimeout,
+	}
+	return createMesosClient(md, httpClient, tr, stateCacheTTL)
+}
+
+func createMesosClient(
+	md detector.Master,
+	httpClient *http.Client,
+	tr *http.Transport,
+	stateCacheTTL time.Duration) (*mesosClient, error) {
+
 	initialMaster := make(chan struct{})
 	client := &mesosClient{
-		httpClient: &http.Client{
-			Transport: tr,
-			Timeout:   mesosHttpClientTimeout,
-		},
+		httpClient:    httpClient,
 		tr:            tr,
 		initialMaster: initialMaster,
 		state: &stateCache{
